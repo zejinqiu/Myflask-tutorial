@@ -1,6 +1,6 @@
 # 忽略文件
 venv/
-
+.idea/
 *.pyc
 __pycache__/
 
