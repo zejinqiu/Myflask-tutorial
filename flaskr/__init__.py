@@ -29,6 +29,7 @@ def create_app(test_config=None):
     def hello():
         return 'Hello, World!'
 
+    # 注册数据库操作到应用
     from . import db
     db.init_app(app)
 
