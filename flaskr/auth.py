@@ -1,11 +1,27 @@
 
 
-from flask import Blueprint, request, redirect, url_for, flash, render_template
+from flask import Blueprint, request, redirect, url_for, flash, render_template, session, g
 from flaskr.db import get_db
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # 创建蓝图
 bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+
+@bp.before_app_request
+def load_logged_in_user():
+    """If a user id is stored in the session, load the user object from
+    the database into ``g.user``."""
+    user_id = session.get("user_id")
+
+    if user_id is None:
+        g.user = None
+    else:
+        g.user = (
+            get_db().execute(
+                "SELECT * FROM user WHERE id = ?",
+                (user_id,
+                 )).fetchone())
 
 
 @bp.route('/register', methods=['GET', 'POST'])
@@ -40,4 +56,31 @@ def register():
 
 @bp.route("/login", methods=("GET", "POST"))
 def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        db = get_db()
+        error = None
+        user = db.execute(
+            'SELECT * FROM user WHERE username = ?', (username,)
+        ).fetchone()
+
+        if user is None:
+            error = 'Incorrect username.'
+        elif not check_password_hash(user['password'], password):
+            error = 'Incorrect password.'
+
+        if error is None:
+            session.clear()
+            session['user_id'] = user['id']
+            return redirect(url_for('index'))
+
+        flash(error)
     return render_template("auth/login.html")
+
+
+@bp.route("/logout")
+def logout():
+    """Clear the current session, including the stored user id."""
+    session.clear()
+    return redirect(url_for("index"))
